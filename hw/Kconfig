@@ -43,6 +43,7 @@ source virtio/Kconfig
 source vfio/Kconfig
 source xen/Kconfig
 source watchdog/Kconfig
+source taic/Kconfig
 
 # arch Kconfig
 source arm/Kconfig
