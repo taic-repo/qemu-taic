@@ -74,6 +74,7 @@ typedef struct CPUArchState CPURISCVState;
 #define RVJ RV('J')
 #define RVG RV('G')
 #define RVB RV('B')
+#define RVN RV('N')
 
 extern const uint32_t misa_bits[];
 const char *riscv_get_misa_ext_name(uint32_t bit);
@@ -304,6 +305,16 @@ struct CPUArchState {
     target_ulong mepc;
     target_ulong mcause;
     target_ulong mtval;  /* since: priv-1.10.0 */
+
+    // user interrupt CSRs
+    target_ulong utvec;
+    target_ulong uscratch;
+    target_ulong uepc;
+    target_ulong ucause;
+    target_ulong utval;
+    
+    target_ulong sedeleg;
+    target_ulong sideleg;
 
     /* Machine and Supervisor interrupt priorities */
     uint8_t miprio[64];
