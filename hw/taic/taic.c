@@ -11,31 +11,70 @@
 #include "hw/irq.h"
 
 static uint64_t taic_read(void *opaque, hwaddr addr, unsigned size) {
-    info_report(" taic read %ld", addr);
+    TAICState* taic = opaque;
+    bool is_ctl = addr < PAGE_SIZE;
+    uint64_t op = addr % PAGE_SIZE;
+    uint64_t idx = (addr / PAGE_SIZE) - 1;
+    uint64_t gq_idx = idx / LQ_NUM;
+    uint64_t lq_idx = idx % LQ_NUM;
+    if(is_ctl) {
+        if(op == 0x0) {
+            return taic_read_alloc_idx(taic);
+        }
+    } else {
+        if(op == 0x08) { // deq
+            return taic_lq_deq(taic, gq_idx, lq_idx);
+        } else if(op == 0x10) { // read_error
+            // TODO
+        } else {
+            error_report("Invalid MMIO read");
+        }
+    }
     return 0;
 }
 
 static void taic_write(void *opaque, hwaddr addr, uint64_t value, unsigned size) {
-    // TAICState* taic = opaque;
-    // uint64_t op = addr % PAGE_SIZE;
-    if(addr < PAGE_SIZE) {
-        // alloc indices
-        // switch(op) {
-        // case IF_IDE:
-        // case IF_SCSI:
-        // case IF_XEN:
-        // case IF_NONE:
-        //     dinfo->media_cd = media == MEDIA_CDROM;
-        //     break;
-        // default:
-        //     break;
-        // }
+    TAICState* taic = opaque;
+    bool is_ctl = addr < PAGE_SIZE;
+    uint64_t op = addr % PAGE_SIZE;
+    uint64_t idx = (addr / PAGE_SIZE) - 1;
+    uint64_t gq_idx = idx / LQ_NUM;
+    uint64_t lq_idx = idx % LQ_NUM;
+    if(is_ctl) {
+        if(op == 0x0) {
+            // 申请全局队列
+            taic_alloc_gq(taic, value);
+        } else if(op == 0x8) {
+            // 释放局部队列
+            taic_free_gq(taic, value);
+        } else if(op >= 0x10 && op < 0x10 + 0x08 * INTR_NUM) {
+            // 模拟产生设备中断
+            uint64_t irq_idx = (op - 0x10) / 0x08;
+            taic_sim_extintr(taic, irq_idx);
+        }
     } else {
         // operations about per queue
-
+        if(op == 0x0) {         // enq
+            taic_lq_enq(taic, gq_idx, lq_idx, value);
+        } else if(op == 0x18) { // register sender
+            taic_register_sender(taic, gq_idx, value);
+        } else if(op == 0x20) { // cancel sender
+            taic_cancel_sender(taic, gq_idx, value);
+        } else if(op == 0x28) { // register receiver
+            taic_register_receiver(taic, gq_idx, value);
+        } else if(op == 0x30) { // send softintr
+            taic_send_softintr(taic, gq_idx, value);
+        } else if(op == 0x38) { // write hartid
+            taic_write_hartid(taic, gq_idx, value);
+        } else {                // register external intr
+            if(op >= 0x40 && op < 0x40 + 0x08 * INTR_NUM) {
+                uint64_t irq_idx = (op - 0x40) / 0x08;
+                taic_register_ext(taic, gq_idx, irq_idx, value);
+            } else {
+                error_report("Invalid MMIO write");
+            }
+        }
     }
-
-
 }
 
 static void taic_irq_request(void *opaque, int irq, int level) {
@@ -63,6 +102,7 @@ static void taic_realize(DeviceState *dev, Error **errp)
                           TYPE_TAIC, TAIC_MMIO_SIZE);
     sysbus_init_mmio(SYS_BUS_DEVICE(dev), &taic->mmio);
     info_report("low 0x%x high 0x%x", (uint32_t)taic->mmio.addr, (uint32_t)taic->mmio.size);
+    taic_init(taic);
     // init external_irqs
     uint32_t external_irq_count = taic->external_irq_count;
     taic->external_irqs = g_malloc(sizeof(qemu_irq) * external_irq_count);
