@@ -8,10 +8,10 @@
 #include "qemu/osdep.h"
 #include "hw/sysbus.h"
 #include "qom/object.h"
-#include "qemu/error-report.h"
 #include "qemu/queue.h"
 #include "qapi/error.h"
 #include "qemu/error-report.h"
+#include "hw/irq.h"
 
 #define TYPE_TAIC "taic"
 #define TAIC_MMIO_BASE      0x1000000
@@ -288,6 +288,14 @@ static inline uint64_t taic_lq_deq(TAICState* taic, uint64_t gq_idx, uint64_t lq
         error_report("Not used GQ");
         return 0;
     }
+    int64_t hartid = taic->gqs[gq_idx].hart_id;
+    if(hartid != -1) {
+        if(taic->gqs[gq_idx].ssip == true) {
+            qemu_irq_lower(taic->ssoft_irqs[hartid]);
+        } else if(taic->gqs[gq_idx].usip == true) {
+            qemu_irq_lower(taic->usoft_irqs[hartid]);
+        }
+    }
     return lq_deq(&(taic->gqs[gq_idx]), lq_idx);
 }
 
@@ -306,6 +314,14 @@ static inline void taic_register_ext(TAICState* taic, uint64_t gq_idx, uint64_t 
 static inline void taic_sim_extintr(TAICState* taic, uint64_t irq_idx) {
     for(int i = 0; i < GQ_NUM; i++) {
         handle_extintr(&(taic->gqs[i]), irq_idx);
+        int64_t hartid = taic->gqs[i].hart_id;
+        if(hartid != -1) {
+            if(taic->gqs[i].ssip == true) {
+                qemu_irq_raise(taic->ssoft_irqs[hartid]);
+            } else if(taic->gqs[i].usip == true) {
+                qemu_irq_raise(taic->usoft_irqs[hartid]);
+            }
+        }
     }
 }
 
@@ -377,6 +393,14 @@ static inline void taic_send_softintr(TAICState* taic, uint64_t gq_idx, uint64_t
                 }
                 if(idx != -1) {     // 找到了对应的接收方的全局队列，处理中断
                     handle_softintr(&(taic->gqs[idx]), send_os, send_proc);
+                    int64_t hartid = taic->gqs[idx].hart_id;
+                    if(hartid != -1) {
+                        if(taic->gqs[idx].ssip == true) {
+                            qemu_irq_raise(taic->ssoft_irqs[hartid]);
+                        } else if(taic->gqs[idx].usip == true) {
+                            qemu_irq_raise(taic->usoft_irqs[hartid]);
+                        }
+                    }
                 }
             }
             qatomic_set(&taic->state, IDLE);
@@ -395,6 +419,14 @@ static inline void taic_write_hartid(TAICState* taic, uint64_t gq_idx, uint64_t 
         return;
     }
     write_hartid(&(taic->gqs[gq_idx]), data);
+    int64_t hartid = taic->gqs[gq_idx].hart_id;
+    if(hartid != -1) {
+        if(taic->gqs[gq_idx].ssip == true) {
+            qemu_irq_raise(taic->ssoft_irqs[hartid]);
+        } else if(taic->gqs[gq_idx].usip == true) {
+            qemu_irq_raise(taic->usoft_irqs[hartid]);
+        }
+    }
 }
 
 DeviceState *taic_create(hwaddr addr, uint32_t hart_count, uint32_t external_irq_count);

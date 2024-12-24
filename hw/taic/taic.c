@@ -9,6 +9,7 @@
 #include "qemu/timer.h"
 #include "exec/cpu-common.h"
 #include "hw/irq.h"
+#include "target/riscv/cpu.h"
 
 static uint64_t taic_read(void *opaque, hwaddr addr, unsigned size) {
     TAICState* taic = opaque;
@@ -114,6 +115,19 @@ static void taic_realize(DeviceState *dev, Error **errp)
     qdev_init_gpio_out(dev, taic->ssoft_irqs, hart_count);
     taic->usoft_irqs = g_malloc(sizeof(qemu_irq) * hart_count);
     qdev_init_gpio_out(dev, taic->usoft_irqs, hart_count);
+    int i = 0;
+    for(i = 0; i < hart_count; i++) {
+        RISCVCPU *cpu = RISCV_CPU(qemu_get_cpu(i));
+        /* Claim software interrupt bits */
+        if (riscv_cpu_claim_interrupts(cpu, MIP_USIP) < 0) {
+            error_report("USIP already claimed");
+            exit(1);
+        }
+        if (riscv_cpu_claim_interrupts(cpu, MIP_SSIP) < 0) {
+            error_report("SSIP already claimed");
+            exit(1);
+        }
+    }
 }
 
 static Property taic_properties[] = {
@@ -148,5 +162,11 @@ DeviceState *taic_create(hwaddr addr, uint32_t hart_count, uint32_t external_irq
     qdev_prop_set_uint32(dev, "external_irq_count", external_irq_count);
     sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
     sysbus_mmio_map(SYS_BUS_DEVICE(dev), 0, addr);
+    int i = 0;
+    for (i = 0; i < hart_count; i++) {
+        CPUState *cpu = qemu_get_cpu(i);
+        qdev_connect_gpio_out(dev, i, qdev_get_gpio_in(DEVICE(cpu), IRQ_S_SOFT));
+        qdev_connect_gpio_out(dev, i + hart_count, qdev_get_gpio_in(DEVICE(cpu), IRQ_U_SOFT));
+    }
     return dev;
 }
