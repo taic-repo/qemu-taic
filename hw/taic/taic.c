@@ -79,6 +79,8 @@ static void taic_write(void *opaque, hwaddr addr, uint64_t value, unsigned size)
 }
 
 static void taic_irq_request(void *opaque, int irq, int level) {
+    TAICState* taic = opaque;
+    taic_sim_extintr(taic, irq);
 }
 
 static const MemoryRegionOps taic_ops = {
