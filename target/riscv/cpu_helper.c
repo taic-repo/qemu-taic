@@ -501,7 +501,7 @@ int riscv_cpu_vsirq_pending(CPURISCVState *env)
 
 static int riscv_cpu_local_irq_pending(CPURISCVState *env)
 {
-    uint64_t irqs, pending, mie, hsie, vsie, irqs_f, irqs_f_vs;
+    uint64_t irqs, pending, mie, hsie, vsie, irqs_f, irqs_f_vs, uie;
     uint64_t vsbits, irq_delegated;
     int virq;
 
@@ -523,27 +523,27 @@ static int riscv_cpu_local_irq_pending(CPURISCVState *env)
     pending = riscv_cpu_all_pending(env);
 
     /* Check M-mode interrupts */
-    irqs = pending & ~env->mideleg & -mie;
+    irqs = pending & ~env->mideleg & ~env->sideleg & -mie;
     if (irqs) {
         return riscv_cpu_pending_to_irq(env, IRQ_M_EXT, IPRIO_DEFAULT_M,
                                         irqs, env->miprio);
     }
 
     /* Check for virtual S-mode interrupts. */
-    irqs_f = env->mvip & (env->mvien & ~env->mideleg) & env->sie;
+    irqs_f = env->mvip & (env->mvien & ~env->mideleg & ~env->sideleg) & env->sie;
 
     /* Check HS-mode interrupts */
-    irqs =  ((pending & env->mideleg & ~env->hideleg) | irqs_f) & -hsie;
+    irqs =  ((pending & env->mideleg & ~env->hideleg & ~env->sideleg) | irqs_f) & -hsie;
     if (irqs) {
         return riscv_cpu_pending_to_irq(env, IRQ_S_EXT, IPRIO_DEFAULT_S,
                                         irqs, env->siprio);
     }
 
     /* Check for virtual VS-mode interrupts. */
-    irqs_f_vs = env->hvip & env->hvien & ~env->hideleg & env->vsie;
+    irqs_f_vs = env->hvip & env->hvien & ~env->hideleg & ~env->sideleg & env->vsie;
 
     /* Check VS-mode interrupts */
-    irq_delegated = pending & env->mideleg & env->hideleg;
+    irq_delegated = pending & env->mideleg & env->hideleg & ~env->sideleg;
 
     /* Bring VS-level bits to correct position */
     vsbits = irq_delegated & VS_MODE_INTERRUPTS;
@@ -559,6 +559,15 @@ static int riscv_cpu_local_irq_pending(CPURISCVState *env)
         } else {
             return virq + 1;
         }
+    }
+
+    /* Enable user interrupt */
+    uie = env->priv == PRV_U && get_field(env->mstatus, MSTATUS_UIE);
+    /* Check U-mode interrupts */
+    irqs = pending & env->sideleg & -uie;
+    if (irqs) {
+        // TODO: AIA is not supported
+        return riscv_cpu_pending_to_irq(env, IRQ_U_EXT, IPRIO_MMAXIPRIO, irqs, NULL);
     }
 
     /* Indicate no pending interrupt */

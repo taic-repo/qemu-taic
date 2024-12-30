@@ -259,6 +259,36 @@ void helper_cbo_inval(CPURISCVState *env, target_ulong address)
 
 #ifndef CONFIG_USER_ONLY
 
+target_ulong helper_uret(CPURISCVState *env)
+{
+    if (env->priv != PRV_U) {
+        riscv_raise_exception(env, RISCV_EXCP_ILLEGAL_INST, GETPC());
+    }
+    target_ulong retpc = env->uepc;
+    if (!riscv_has_ext(env, RVC) && (retpc & 0x3)) {
+        riscv_raise_exception(env, RISCV_EXCP_INST_ADDR_MIS, GETPC());
+    }
+    
+    uint64_t mstatus = env->mstatus;
+    mstatus = set_field(mstatus, MSTATUS_UIE, get_field(mstatus, MSTATUS_UPIE));
+    mstatus = set_field(mstatus, MSTATUS_UPIE, 1);
+    env->mstatus = mstatus; 
+
+    /* User interrupt trigger */
+    if (riscv_has_ext(env, RVN)
+        && get_field(env->mip, MIP_USIP)
+        && get_field(env->mstatus, MSTATUS_UIE)
+        && get_field(env->sideleg, MIP_USIP)) {
+        retpc = env->utvec;
+        mstatus = env->mstatus;
+        mstatus = set_field(mstatus, MSTATUS_UPIE, 1);
+        mstatus = set_field(mstatus, MSTATUS_UIE, 0);
+        env->mstatus = mstatus;
+    }
+
+    return retpc;
+}
+
 target_ulong helper_sret(CPURISCVState *env)
 {
     uint64_t mstatus;
@@ -309,6 +339,19 @@ target_ulong helper_sret(CPURISCVState *env)
 
     riscv_cpu_set_mode(env, prev_priv, prev_virt);
 
+    /* User interrupt trigger */
+    if (riscv_has_ext(env, RVN)
+        && prev_priv == PRV_U
+        && get_field(env->mip, MIP_USIP)
+        && get_field(env->mstatus, MSTATUS_UIE)
+        && get_field(env->sideleg, MIP_USIP)) {
+        retpc = env->utvec;
+        env->uepc = env->sepc;
+        mstatus = env->mstatus;
+        mstatus = set_field(mstatus, MSTATUS_UPIE, 1);
+        mstatus = set_field(mstatus, MSTATUS_UIE, 0);
+        env->mstatus = mstatus;
+    }
     /*
      * If forward cfi enabled for new priv, restore elp status
      * and clear spelp in mstatus
