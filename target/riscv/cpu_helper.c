@@ -1931,7 +1931,7 @@ void riscv_cpu_do_interrupt(CPUState *cs)
             // direct or vector
             env->pc = (env->utvec >> 2 << 2) + 
                 ((async && (env->utvec & 3) == 1) ? cause * 4 : 0);
-            info_report("user interrupt, utvec: 0x%lx", env->utvec);
+            // info_report("user interrupt, utvec: 0x%lx", env->utvec);
             riscv_cpu_set_mode(env, PRV_U, virt);
         }
     } else if (env->priv <= PRV_S && cause < 64 &&
