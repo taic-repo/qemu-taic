@@ -18,7 +18,7 @@
 #define TAIC_MMIO_SIZE      0x1000000
 #define PAGE_SIZE           0x1000
 #define GQ_NUM              4
-#define LQ_NUM              2
+#define LQ_NUM              8
 #define INTR_NUM            6
 
 typedef QSIMPLEQ_HEAD(, QueueEntry) QueueHead;
@@ -281,11 +281,11 @@ static inline void taic_lq_enq(TAICState* taic, uint64_t gq_idx, uint64_t lq_idx
 
 static inline uint64_t taic_lq_deq(TAICState* taic, uint64_t gq_idx, uint64_t lq_idx) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Invalid gq_idx");
+        error_report("Enq Invalid gq_idx");
         return 0;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Not used GQ");
+        error_report("Enq Not used GQ");
         return 0;
     }
     int64_t hartid = taic->gqs[gq_idx].hart_id;
@@ -301,11 +301,11 @@ static inline uint64_t taic_lq_deq(TAICState* taic, uint64_t gq_idx, uint64_t lq
 
 static inline void taic_register_ext(TAICState* taic, uint64_t gq_idx, uint64_t irq_idx, uint64_t data) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Invalid gq_idx");
+        error_report("Deq Invalid gq_idx");
         return;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Not used GQ");
+        error_report("Deq Not used GQ");
         return;
     }
     register_ext_handler(&(taic->gqs[gq_idx]), irq_idx, data);
