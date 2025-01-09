@@ -79,7 +79,7 @@ int64_t alloc_lq(GlobalQueue* global_queue) {
                     return i;
                 }
             }
-            error_report("The is no local queue");
+            // error_report("The is no local queue");
             qatomic_set(&global_queue->state, GQ_IDLE);
             return -1;
         }
@@ -88,7 +88,7 @@ int64_t alloc_lq(GlobalQueue* global_queue) {
 
 void free_lq(GlobalQueue* global_queue, uint64_t lq_idx) {
     if(lq_idx >= LQ_NUM) {
-        error_report("The lq_idx is not valid");
+        // error_report("The lq_idx is not valid");
         return;
     }
     uint64_t state = 0;

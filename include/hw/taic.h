@@ -269,11 +269,11 @@ static inline void taic_free_gq(TAICState* taic, uint64_t idx) {
 
 static inline void taic_lq_enq(TAICState* taic, uint64_t gq_idx, uint64_t lq_idx, uint64_t data) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Invalid gq_idx");
+        // error_report("Invalid gq_idx");
         return;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Not used GQ");
+        // error_report("Not used GQ");
         return;
     }
     lq_enq(&(taic->gqs[gq_idx]), lq_idx, data, false);
@@ -281,11 +281,11 @@ static inline void taic_lq_enq(TAICState* taic, uint64_t gq_idx, uint64_t lq_idx
 
 static inline uint64_t taic_lq_deq(TAICState* taic, uint64_t gq_idx, uint64_t lq_idx) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Enq Invalid gq_idx");
+        // error_report("Enq Invalid gq_idx");
         return 0;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Enq Not used GQ");
+        // error_report("Enq Not used GQ");
         return 0;
     }
     int64_t hartid = taic->gqs[gq_idx].hart_id;
@@ -301,11 +301,11 @@ static inline uint64_t taic_lq_deq(TAICState* taic, uint64_t gq_idx, uint64_t lq
 
 static inline void taic_register_ext(TAICState* taic, uint64_t gq_idx, uint64_t irq_idx, uint64_t data) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Deq Invalid gq_idx");
+        // error_report("Deq Invalid gq_idx");
         return;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Deq Not used GQ");
+        // error_report("Deq Not used GQ");
         return;
     }
     register_ext_handler(&(taic->gqs[gq_idx]), irq_idx, data);
@@ -327,11 +327,11 @@ static inline void taic_sim_extintr(TAICState* taic, uint64_t irq_idx) {
 
 static inline void taic_register_sender(TAICState* taic, uint64_t gq_idx, uint64_t data) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Invalid gq_idx");
+        // error_report("Invalid gq_idx");
         return;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Not used GQ");
+        // error_report("Not used GQ");
         return;
     }
     register_sender(&(taic->gqs[gq_idx]), data);
@@ -339,11 +339,11 @@ static inline void taic_register_sender(TAICState* taic, uint64_t gq_idx, uint64
 
 static inline void taic_cancel_sender(TAICState* taic, uint64_t gq_idx, uint64_t data) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Invalid gq_idx");
+        // error_report("Invalid gq_idx");
         return;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Not used GQ");
+        // error_report("Not used GQ");
         return;
     }
     cancel_sender(&(taic->gqs[gq_idx]), data);
@@ -351,11 +351,11 @@ static inline void taic_cancel_sender(TAICState* taic, uint64_t gq_idx, uint64_t
 
 static inline void taic_register_receiver(TAICState* taic, uint64_t gq_idx, uint64_t data) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Invalid gq_idx");
+        // error_report("Invalid gq_idx");
         return;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Not used GQ");
+        // error_report("Not used GQ");
         return;
     }
     register_receiver(&(taic->gqs[gq_idx]), data);
@@ -363,11 +363,11 @@ static inline void taic_register_receiver(TAICState* taic, uint64_t gq_idx, uint
 
 static inline void taic_send_softintr(TAICState* taic, uint64_t gq_idx, uint64_t data) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Invalid gq_idx");
+        // error_report("Invalid gq_idx");
         return;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Not used GQ");
+        // error_report("Not used GQ");
         return;
     }
     uint64_t state = 0;
@@ -411,11 +411,11 @@ static inline void taic_send_softintr(TAICState* taic, uint64_t gq_idx, uint64_t
 
 static inline void taic_write_hartid(TAICState* taic, uint64_t gq_idx, uint64_t data) {
     if(gq_idx >= GQ_NUM) {
-        error_report("Invalid gq_idx");
+        // error_report("Invalid gq_idx");
         return;
     }
     if(taic->gqs[gq_idx].os_id == 0 && taic->gqs[gq_idx].proc_id == 0) {
-        error_report("Not used GQ");
+        // error_report("Not used GQ");
         return;
     }
     write_hartid(&(taic->gqs[gq_idx]), data);
